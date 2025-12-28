@@ -10,7 +10,7 @@ const PAGE_SIZE = 10;
 type PagedRequestGetCustomers = PagedRequest<Customer> & { country: string };
 
 export const CustomerTable2: React.FC = () => {
-  const [requestParams, setRequestParams] = useState<PagedRequestGetCustomers>({
+  const [tableState, setTableState] = useState<PagedRequestGetCustomers>({
     country: "",
     filter: '',
     pageNumber: 1,
@@ -21,38 +21,34 @@ export const CustomerTable2: React.FC = () => {
   const [filterString, setFilterString] = useState('');
   const debouncedFilter = useDebounce<string>(filterString, 1000);
 
-  const myPagedRequest : PagedRequestGetCustomers = {...requestParams, filter: debouncedFilter};
+  const myPagedRequest : PagedRequestGetCustomers = {...tableState, filter: debouncedFilter};
 
   const {data, isLoading, isError} = usePagedData<Customer>('demo', myPagedRequest);
 
   const onFilterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFilterString(event.target.value);
-    setRequestParams({
-      ...requestParams,
-      filter: filterString
-    });
   };
   const handlePageNav = (direction: 'prev' | 'next') => {
-    if (direction === 'prev' && requestParams.pageNumber > 1) {
-      setRequestParams({
-        ...requestParams,
-        pageNumber: requestParams.pageNumber - 1
+    if (direction === 'prev' && tableState.pageNumber > 1) {
+      setTableState({
+        ...tableState,
+        pageNumber: tableState.pageNumber - 1
       });
-    } else if (direction === 'next' && requestParams.pageNumber < totalPages) {
-      setRequestParams({
-        ...requestParams,
-        pageNumber: requestParams.pageNumber + 1
+    } else if (direction === 'next' && tableState.pageNumber < totalPages) {
+      setTableState({
+        ...tableState,
+        pageNumber: tableState.pageNumber + 1
       });
     }
   };
   const handleSort = (column: keyof Customer) => {
-    column === requestParams.sortColumn 
-    ?    setRequestParams({
-        ...requestParams,
-        isDescending: !requestParams.isDescending
+    column === tableState.sortColumn 
+    ?    setTableState({
+        ...tableState,
+        isDescending: !tableState.isDescending
       })
-      : setRequestParams({
-        ...requestParams,
+      : setTableState({
+        ...tableState,
         sortColumn: column
       });
   };
@@ -69,16 +65,16 @@ export const CustomerTable2: React.FC = () => {
         <thead>
           <tr>
             <th onClick={() => handleSort('customerId')}>
-              ID {requestParams.sortColumn === 'customerId' && `(${requestParams.isDescending})`}
+              ID {tableState.sortColumn === 'customerId' && `(${tableState.isDescending})`}
             </th>
             <th onClick={() => handleSort('companyName')}>
-              Name {requestParams.sortColumn === 'companyName' && `(${requestParams.isDescending})`}
+              Name {tableState.sortColumn === 'companyName' && `(${tableState.isDescending})`}
             </th>
             <th onClick={() => handleSort('contactName')}>
-              Name {requestParams.sortColumn === 'contactName' && `(${requestParams.isDescending})`}
+              Name {tableState.sortColumn === 'contactName' && `(${tableState.isDescending})`}
             </th>
             <th onClick={() => handleSort('contactTitle')}>
-              Email {requestParams.sortColumn === 'contactTitle' && `(${requestParams.isDescending})`}
+              Email {tableState.sortColumn === 'contactTitle' && `(${tableState.isDescending})`}
             </th>
           </tr>
         </thead>
@@ -98,18 +94,18 @@ export const CustomerTable2: React.FC = () => {
       <div style={{ marginTop: 12 }}>
         <button
           onClick={() => handlePageNav('prev')}
-          disabled={requestParams.pageNumber === 1}
+          disabled={tableState.pageNumber === 1}
         >
           Prev
         </button>
 
         <span style={{ margin: '0 8px' }}>
-          Page {requestParams.pageNumber} of {totalPages}
+          Page {tableState.pageNumber} of {totalPages}
         </span>
 
         <button
           onClick={() => handlePageNav('next')}
-          disabled={requestParams.pageNumber === totalPages}
+          disabled={tableState.pageNumber === totalPages}
         >
           Next
         </button>
