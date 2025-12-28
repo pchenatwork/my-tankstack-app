@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { PagedResponse,  PagedRequestBase } from '../types/common';
+import type { PagedResponse,  PagedRequest } from '../types/common';
 
 export type Customer = {
   customerId: string,
@@ -15,7 +15,7 @@ export type Customer = {
   fax: string
 }
 
-export type FetchCustomersParams = PagedRequestBase<Customer> & {
+export type FetchCustomersParams = PagedRequest<Customer> & {
   country: string
 }
 

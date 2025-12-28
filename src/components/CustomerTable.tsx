@@ -1,17 +1,80 @@
 // UserTable.tsx
 import React, { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { fetchCustomers, type Customer } from '../apis/customer';
+import { type Customer } from '../apis/customer';
+import type { PagedRequest, PagedResponse} from '../types/common';
+import useDebounce from '../hooks/useDebounce';
+import { fetchPagedDateAsync } from '../apis/comment';
+import axios from 'axios';
 
 const PAGE_SIZE = 10;
 
-export const CustomerTable: React.FC = () => {
-    const [country, setCountry] = useState<string>("")
-    const [filter, setFilter] = useState<string>("")
-  const [pageNumber, setPageNumber] = useState<number>(1);
-  const [sortColumn, setSortColumn] = useState<keyof Customer>('companyName');
-  const [isDescending, setIsDescending] = useState<boolean>(false);
+type PagedRequestGetCustomers = PagedRequest<Customer> & { country: string };
 
+/* Original function to fetch customers, obsolete  by fetchPagedDateAsync */
+async function fetchCustomers(
+  params: PagedRequestGetCustomers
+): Promise<PagedResponse<Customer>> {
+  console.log('fetchCustomers', JSON.stringify(params));
+  const response = await axios.post<PagedResponse<Customer>>(
+    'https://localhost:7257/api/Demo', params
+  );
+  return {
+    items: response.data.items,
+    totalNumber: response.data.totalNumber,
+    filteredNumber: response.data.filteredNumber
+  };
+}
+/**/
+
+export const CustomerTable: React.FC = () => {
+  const iniRequestParams : PagedRequestGetCustomers = {
+    country: "USA",
+    filter: '',
+    pageNumber: 1,
+    pageSize: PAGE_SIZE,
+    sortColumn: "companyName",
+    isDescending: false
+  }
+
+  const [filterString, setFilterString] = useState('');
+  const debouncedFilterString = useDebounce<string>(filterString);
+  const [requestParams, setRequestParams] = useState<PagedRequestGetCustomers>(iniRequestParams);
+
+  const myRequestParams : PagedRequestGetCustomers = {...requestParams, filter: debouncedFilterString};
+
+  const onFilterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFilterString(event.target.value);
+    setRequestParams({
+      ...requestParams,
+      filter: filterString
+    });
+  };
+  const handlePageNav = (direction: 'prev' | 'next') => {
+    if (direction === 'prev' && requestParams.pageNumber > 1) {
+      setRequestParams({
+        ...requestParams,
+        pageNumber: requestParams.pageNumber - 1
+      });
+    } else if (direction === 'next' && requestParams.pageNumber < totalPages) {
+      setRequestParams({
+        ...requestParams,
+        pageNumber: requestParams.pageNumber + 1
+      });
+    }
+  };
+
+  const { data , isLoading, isError } = useQuery({
+    //queryKey: ['customers', { ...requestParams, filterString: debouncedFilterString}],
+    queryKey: ['customers', { ...myRequestParams}],
+    queryFn: () =>
+      fetchPagedDateAsync<Customer>('Demo', myRequestParams)
+      //fetchCustomers(myRequestParams)
+    ,
+   placeholderData: keepPreviousData
+  });
+
+/*
   const { data, isLoading, isError } = useQuery({
     queryKey: ['customers', country, filter, pageNumber, sortColumn, isDescending],
     queryFn: () =>
@@ -23,16 +86,18 @@ export const CustomerTable: React.FC = () => {
         sortColumn,
         isDescending,
       }),
-      placeholderData: keepPreviousData
-  });
-
+    })
+ */
   const handleSort = (column: keyof Customer) => {
-    if (column === sortColumn) {
-      setIsDescending((prev) => !prev);
-    } else {
-      setSortColumn(column);
-      setIsDescending(false);
-    }
+    column === requestParams.sortColumn 
+    ?    setRequestParams({
+        ...requestParams,
+        isDescending: !requestParams.isDescending
+      })
+      : setRequestParams({
+        ...requestParams,
+        sortColumn: column
+      });
   };
 
   if (isLoading) return <p>Loading...</p>;
@@ -42,20 +107,21 @@ export const CustomerTable: React.FC = () => {
 
   return (
     <div>
+      <input type="text" value={filterString} onChange={onFilterChange} />
       <table>
         <thead>
           <tr>
             <th onClick={() => handleSort('customerId')}>
-              ID {sortColumn === 'customerId' && `(${isDescending})`}
+              ID {requestParams.sortColumn === 'customerId' && `(${requestParams.isDescending})`}
             </th>
             <th onClick={() => handleSort('companyName')}>
-              Name {sortColumn === 'companyName' && `(${isDescending})`}
+              Name {requestParams.sortColumn === 'companyName' && `(${requestParams.isDescending})`}
             </th>
             <th onClick={() => handleSort('contactName')}>
-              Name {sortColumn === 'contactName' && `(${isDescending})`}
+              Name {requestParams.sortColumn === 'contactName' && `(${requestParams.isDescending})`}
             </th>
             <th onClick={() => handleSort('contactTitle')}>
-              Email {sortColumn === 'contactTitle' && `(${isDescending})`}
+              Email {requestParams.sortColumn === 'contactTitle' && `(${requestParams.isDescending})`}
             </th>
           </tr>
         </thead>
@@ -74,19 +140,19 @@ export const CustomerTable: React.FC = () => {
 
       <div style={{ marginTop: 12 }}>
         <button
-          onClick={() => setPageNumber((p) => Math.max(p - 1, 1))}
-          disabled={pageNumber === 1}
+          onClick={() => handlePageNav('prev')}
+          disabled={requestParams.pageNumber === 1}
         >
           Prev
         </button>
 
         <span style={{ margin: '0 8px' }}>
-          Page {pageNumber} of {totalPages}
+          Page {requestParams.pageNumber} of {totalPages}
         </span>
 
         <button
-          onClick={() => setPageNumber((p) => Math.min(p + 1, totalPages))}
-          disabled={pageNumber === totalPages}
+          onClick={() => handlePageNav('next')}
+          disabled={requestParams.pageNumber === totalPages}
         >
           Next
         </button>
