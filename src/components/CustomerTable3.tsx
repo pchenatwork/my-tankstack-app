@@ -45,17 +45,6 @@ export const CustomerTable3: React.FC = () => {
       });
     }
   };
-  const handleSort = (column: keyof Customer) => {
-    column === tableState.sortColumn 
-    ?    setTableState({
-        ...tableState,
-        isDescending: !tableState.isDescending
-      })
-      : setTableState({
-        ...tableState,
-        sortColumn: column
-      });
-  };
 
   if (isLoading) return <p>Loading...</p>;
   if (isError || !data) return <p>Error loading data</p>;
